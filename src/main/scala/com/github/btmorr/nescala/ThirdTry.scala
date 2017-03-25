@@ -7,7 +7,6 @@ import cats.data.State
 
 
 object ThirdTry extends App {
-
   sealed trait ComputeResourceA[A]
   type ComputeResource[A] = Free[ComputeResourceA, A]
   // http://typelevel.org/cats/datatypes/freemonad.html
@@ -45,6 +44,7 @@ object ThirdTry extends App {
   case class TypedThing[T](value: T)
   val listOfFour: String => List[String] = s => List(s, s, s, s)
   val joinTogether: List[String] => String = ls => ls.mkString("*")
+  // doing this because I couldn't break out to a list in its own operation or join as its own
   val flurryOfActivity: String => String = s => joinTogether(listOfFour(s))
   val caseItUp: String => String = s => s.toUpperCase
   val wrapItUp: String => TypedThing[String] = s => TypedThing(s)
@@ -66,7 +66,6 @@ object ThirdTry extends App {
 
   program("testing")
 
-  type ComputationState[T] = State[Map[String, Any], T]
   val impureCompiler: ComputeResourceA ~> Id =
     new (ComputeResourceA ~> Id) {
       def apply[A](fa: ComputeResourceA[A]): Id[A] =
@@ -85,9 +84,51 @@ object ThirdTry extends App {
         }
     }
 
+  val debugCompiler: ComputeResourceA ~> Id =
+    new (ComputeResourceA ~> Id) {
+      def apply[A](fa: ComputeResourceA[A]): Id[A] =
+        fa match {
+          case Coccoon(v) => {
+            println(s"\tCoccooned:      $v")
+            v
+          }
+          // this illustrates one of the weirdnesses. f happens prior to the creation
+          // of the Differentiate. Do the classes need to represent the results of
+          // the computation? If so, is this block only for the side-effects that are
+          // meant to happen after?
+          case Differentiate(v) => {
+            println(s"\tDifferentiated: $v")
+            v
+          }
+          // given the look at Differentiate above and when the f is applied, what
+          // about these three, where it gets applied in here? do they both work?
+          case Nectarize(v, f) => {
+            val res = f(v)
+            println(s"\tNectarized:     $res")
+            res 
+          }
+          case Arborealize(v, f) => {
+            val res = f(v)
+            println(s"\tArborealized:   $res")
+            res 
+          }
+          case Enplume(v, f) => {
+            val res = f(v)
+            println(s"\tEnplumed:       $res")
+            res 
+          }
+        }
+    }
+
+  // is there a problem with providing the initial input this way? is there an obviously better way?
+  println(s"\n\nImpure Compiler:")
   val result: TypedThing[String] =
-    program("hi mom").foldMap(impureCompiler)
-  println(s"Second try result: $result")
+    program("hi y'all").foldMap(impureCompiler)
+  println(s"Impure try result: $result")
+  println(s"\n\nDebug Compiler:")
+  val result2: TypedThing[String] =
+    program("hi y'all").foldMap(debugCompiler)
+  println(s"Debug try result: $result2")
 
 
   /* Specific questions:
