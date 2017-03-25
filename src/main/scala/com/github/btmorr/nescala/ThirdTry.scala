@@ -6,7 +6,8 @@ import cats.{Id, ~>}
 import cats.data.State
 
 
-object SecondTry extends App {
+object ThirdTry extends App {
+
   sealed trait ComputeResourceA[A]
   type ComputeResource[A] = Free[ComputeResourceA, A]
   // http://typelevel.org/cats/datatypes/freemonad.html
@@ -65,6 +66,7 @@ object SecondTry extends App {
 
   program("testing")
 
+  type ComputationState[T] = State[Map[String, Any], T]
   val impureCompiler: ComputeResourceA ~> Id =
     new (ComputeResourceA ~> Id) {
       def apply[A](fa: ComputeResourceA[A]): Id[A] =
@@ -83,9 +85,18 @@ object SecondTry extends App {
         }
     }
 
-  // is there a problem with providing the initial input this way? is there an obviously better way?
   val result: TypedThing[String] =
-    program("hi y'all").foldMap(impureCompiler)
+    program("hi mom").foldMap(impureCompiler)
   println(s"Second try result: $result")
 
+
+  /* Specific questions:
+   * - how do we include a step that might take one thing and give a collection of things,
+   *       where a successive stage might want to map over the resulting collection?
+   * - how to use Applicatives to accomplish the parallelism?
+   * - what _really_ is gained by doing this over just writing pure functions that do the things
+   *       inside of the compiler and/or program? It seems like a lot of boilerplate...
+   * - how do you do the introspection mid-stream and use this for testing and whatnot? [people
+   *       say that you can do this as if it's obvious, which makes me feel dumb]
+   */
 }
